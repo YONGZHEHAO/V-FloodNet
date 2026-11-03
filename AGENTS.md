@@ -14,6 +14,11 @@ Read `docs/CODEX_CLOUD.md` before installing or running inference.
 - Check: `bash .codex/run.sh .codex/check_environment.py --profile cpu --require-weights --smoke`.
   For the image-only profile, use `--profile image` instead.
 - Image masks: `bash .codex/run.sh test_image_seg.py --test-path assets/img_exp --test-name demo`.
+- Start the source-traceable sample batch with `bash .codex/run.sh scripts/recognize_depth.py --input-dir assets/hydrodynamic_events_20261103/images --manifest assets/hydrodynamic_events_20261103/manifest.json --test-name hydrodynamic118`.
+  Open `output/recognition/hydrodynamic118/index.html`. Missing reference dimensions
+  must leave metric depths null. Detection of people/vehicles alone is not depth inference.
+- Before inference changes, run `bash .codex/run.sh -m unittest discover -s tests -v`.
+  Preserve the regression that an all-zero water mask stays all zero.
 - Stop sign depths: `bash .codex/run.sh est_waterlevel.py --test-path assets/img_exp --test-name demo --opt stopsign --device cpu`.
   A negative upstream depth (`-1`) means estimation failed; it is not a water depth.
   Ask for or inspect the reference's actual physical dimensions before using

@@ -11,6 +11,9 @@ on:
       - 'test_image_seg.py'
       - 'est_waterlevel.py'
       - 'estimation/**'
+      - 'myutils/data.py'
+      - 'tests/**'
+      - 'scripts/recognize_depth.py'
   pull_request:
     paths:
       - '.codex/**'
@@ -19,6 +22,9 @@ on:
       - 'test_image_seg.py'
       - 'est_waterlevel.py'
       - 'estimation/**'
+      - 'myutils/data.py'
+      - 'tests/**'
+      - 'scripts/recognize_depth.py'
 
 permissions:
   contents: read
@@ -36,6 +42,7 @@ jobs:
         run: bash .codex/setup.sh
       - name: Real image inference and CPU compatibility checks
         run: |
+          bash .codex/run.sh -m unittest discover -s tests -v
           bash .codex/run.sh .codex/check_environment.py --profile cpu --require-weights --smoke --depth-smoke
           bash .codex/run.sh est_waterlevel.py --help
       - name: Save environment report and demo images

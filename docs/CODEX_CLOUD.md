@@ -57,6 +57,40 @@ bash .codex/run.sh .codex/check_environment.py --profile cpu --require-weights -
 
 ## 图片分割
 
+### 一条命令开始识别本仓库的118张照片
+
+在环境已安装后，从仓库根目录执行：
+
+```bash
+bash .codex/run.sh scripts/recognize_depth.py --input-dir assets/hydrodynamic_events_20261103/images --manifest assets/hydrodynamic_events_20261103/manifest.json --test-name hydrodynamic118
+```
+
+此入口同时执行水体分割和人物、车辆、停止标志的检测，输出到
+`output/recognition/hydrodynamic118/`。打开 `index.html` 逐图查看，
+`results.json` 保留来源、输入SHA256、模型检测结果和水深状态。
+这里的检测仅用来筛选参照物：检出人物或汽车，不代表已完成人物或车辆估深。
+这118张输入当前没有已核实参考尺寸，因此不能自动填入厘米水深。
+没有停止标志、没有水像素或缺尺寸，分别记录原因并保留 `estimated_depth_cm: null`。
+
+若使用自己的平铺图片目录，将 `--input-dir` 换成该目录，去掉不对应的 `--manifest`。
+已核实同批照片的停止标志尺寸时，可以同时提供 `--sign-size-cm` 和
+`--pole-height-cm`；图中必须是这些尺寸适用的同类参考物。
+新的一次运行使用新的 `--test-name`，脚本会拒绝覆盖旧目录。
+
+复现项目自带的8张停止标志图片：
+
+```bash
+bash .codex/run.sh scripts/recognize_depth.py --input-dir assets/lake_exp --test-name lake_demo --demo
+```
+
+只有项目自带的 `assets/lake_exp` 允许 `--demo` 使用上游默认尺寸。
+演示结果仍属于模型估计，不是水深真值。
+也可在 GitHub Actions 中手动运行 **Recognize water depth samples** 工作流，
+它会执行掩膜回归检查、8张演示图和118张来源样本，下载产物后打开其中的 `index.html`。
+这些脚本也能在已经安装好的 Codex 云端环境运行；GitHub Actions 是独立的 Linux 运行环境。
+
+### 单独运行图片分割
+
 ```bash
 bash .codex/run.sh test_image_seg.py --test-path assets/img_exp --test-name demo
 ```

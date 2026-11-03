@@ -15,26 +15,16 @@ color_palette = [0, 0, 0, 0, 0, 128, 0, 128, 0, 128, 0, 0] + [100, 100, 100] * 2
 
 
 def postprocessing_pred(pred: np.array) -> np.array:
-
-    label_cnt, labels = cv2.connectedComponentsWithAlgorithm(pred, 8, cv2.CV_32S, cv2.CCL_GRANA)
-    if label_cnt == 2:
-        if labels[0, 0] == pred[0, 0]:
-            pred = labels
-        else:
-            pred = 1 - labels
-    else:
-        max_cnt, max_label = 0, 0
-        for i in range(label_cnt):
-            mask = labels == i
-            if pred[mask][0] == 0:
-                continue
-            cnt = len(mask.nonzero()[0])
-            if cnt > max_cnt:
-                max_cnt = cnt
-                max_label = i
-        pred = labels == max_label
-
-    return pred.astype(np.uint8)
+    # Component 0 is background. With no water component, selecting 0 would
+    # incorrectly turn a dry image into an all-water mask.
+    foreground = np.asarray(pred != 0, dtype=np.uint8)
+    label_cnt, labels = cv2.connectedComponentsWithAlgorithm(
+        foreground, 8, cv2.CV_32S, cv2.CCL_GRANA)
+    if label_cnt == 1:
+        return np.zeros_like(foreground)
+    sizes = np.bincount(labels.ravel(), minlength=label_cnt)
+    sizes[0] = 0
+    return (labels == sizes.argmax()).astype(np.uint8)
 
 
 def calc_uncertainty(score):
