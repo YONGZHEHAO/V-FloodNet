@@ -50,3 +50,4 @@ jobs:
             output/waterlevel/cloud_stopsign_stopsign/
           if-no-files-found: ignore
           retention-days: 7
+          include-hidden-files: true

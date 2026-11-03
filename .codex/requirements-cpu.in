@@ -30,4 +30,4 @@ packaging==24.1
 setuptools==69.5.1
 wheel==0.44.0
 pip==24.3.1
-ninja==1.11.1.1
+ninja==1.11.1.4

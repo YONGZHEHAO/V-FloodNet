@@ -64,7 +64,7 @@ mypy-extensions==1.1.0
     # via black
 networkx==3.4.2
     # via torch
-ninja==1.11.1.1
+ninja==1.11.1.4
     # via -r .codex/requirements-cpu.in
 numpy==1.23.5
     # via

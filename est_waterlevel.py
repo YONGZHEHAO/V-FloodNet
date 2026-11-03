@@ -44,7 +44,7 @@ def main(args):
     record_dir = './records/groundtruth'
 
     if args.opt in ['people', 'stopsign']:
-        device = args.device
+        device = getattr(args, 'device', 'auto')
         if device == 'auto':
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
         if device == 'cuda' and not torch.cuda.is_available():
@@ -52,9 +52,11 @@ def main(args):
         if args.opt == 'people' and device != 'cuda':
             raise RuntimeError('The upstream human mesh pipeline requires CUDA, MeshTransformer and licensed SMPL files. Use the stop sign CPU route or a GPU environment.')
         from estimation.object_detection import est_by_obj_detection, stopsign_meta
-        if args.sign_size_cm <= 0 or args.pole_height_cm <= 0:
+        sign_size_cm = getattr(args, 'sign_size_cm', 79.0)
+        pole_height_cm = getattr(args, 'pole_height_cm', 215.9)
+        if sign_size_cm <= 0 or pole_height_cm <= 0:
             raise ValueError('Reference dimensions must be positive, in cm.')
-        stopsign_meta.update(size=args.sign_size_cm, pole_height=args.pole_height_cm)
+        stopsign_meta.update(size=sign_size_cm, pole_height=pole_height_cm)
         est_by_obj_detection(img_list, water_mask_list, out_dir, args.opt, device=device)
     elif args.opt == 'ref':
         from estimation.reference_tracking import est_by_reference
