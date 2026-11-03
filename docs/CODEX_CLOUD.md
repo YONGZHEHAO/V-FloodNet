@@ -128,6 +128,9 @@ bash .codex/run.sh est_waterlevel.py --test-path WaterDataset/my_images --test-n
 
 ## 其他路线的边界
 
+新增的人物CPU适配、公开权重检查与SMPL导入步骤见[人物路线说明](PEOPLE_DEPTH.md)。
+该扩展与下表的基础CPU配置分开安装；缺少SMPL或没有实际前向结果时不能宣称人物估深已跑通。
+
 | 路线 | 当前 CPU 配置 |
 | --- | --- |
 | 图片分割 | 提供安装、官方权重和真实图片检查 |

@@ -23,10 +23,15 @@ Read `docs/CODEX_CLOUD.md` before installing or running inference.
   A negative upstream depth (`-1`) means estimation failed; it is not a water depth.
   Ask for or inspect the reference's actual physical dimensions before using
   estimates as measurements. The built-in dimensions may not match local signs.
-- Do not claim the human, video or interactive reference routes are configured
-  by the CPU setup. Human meshes require CUDA, MeshTransformer and separately
-  licensed SMPL files. The original video entry point requires CUDA. Interactive
-  reference tracking needs precomputed calibration files on a headless machine.
+- The base CPU setup does not configure human meshes. The optional experimental
+  headless body route uses `bash .codex/setup_people.sh`; read `docs/PEOPLE_DEPTH.md`.
+  It patches the pinned vendor body encoder for CPU and still requires the user's
+  licensed SMPL file. Successful checkpoint loading is not a completed SMPL forward
+  or depth inference. The original human/video scripts still have CUDA calls.
+  Interactive reference tracking needs precomputed calibration on a headless machine.
+- Prepare aligned body candidates with `scripts/prepare_people_candidates.py`.
+  The ranking is a heuristic; visually review the selected person before inference.
+  Do not silently insert average height. Missing known height keeps metric depth null.
 - Do not fabricate depths, training results, ground truth or GPU availability.
   Report imports, inference, and accuracy validation separately. Segmentation
   alone provides a water mask, not depth in cm or m.

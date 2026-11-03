@@ -1,0 +1,5 @@
+# Optional body mesh profile. Retain the same Python/torch/numpy model stack.
+-r requirements-cpu.in
+boto3==1.35.54
+botocore==1.35.54
+chumpy==0.70

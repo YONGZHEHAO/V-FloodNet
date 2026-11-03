@@ -5,6 +5,9 @@
 > 使用 `bash .codex/run.sh ...` 运行。默认提供图片分割和停止标志估深依赖。
 > 人物/视频的 CUDA 路线及 SMPL 授权文件不包含在该 CPU 配置中。
 > 下方保留原作者说明；云端不要直接安装旧版根目录 `requirements.txt`。
+>
+> **人物路线扩展：** [CPU适配与SMPL导入说明](docs/PEOPLE_DEPTH.md)。
+> 公开人体权重与CPU编码器可单独检查；完整网格推理仍需要用户的官方SMPL文件。
 
 This is an official PyTorch implementation for paper "V-FloodNet: A Video Segmentation System for Urban Flood Detection and Quantification". A robust automatic system for water level or inundation depth estimation from images and videos, consisting of reliable
 water and reference object detection/segmentation, and depth estimation models. 

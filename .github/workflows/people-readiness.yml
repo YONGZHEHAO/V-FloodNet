@@ -1,0 +1,33 @@
+name: People model CPU readiness
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-model-check:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.16'
+      - name: Install the public body-model stack
+        run: |
+          VFLOOD_PROFILE=image bash .codex/setup.sh
+          bash .codex/setup_people.sh
+      - name: Check crop geometry, CPU operators and real checkpoint loading
+        run: |
+          bash .codex/run.sh -m unittest discover -s tests -v
+          bash .codex/run.sh scripts/people_depth.py --check --load-weights
+      - name: Save readiness report (no licensed SMPL files)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: people-model-readiness
+          path: output/people_depth/readiness.json
+          if-no-files-found: ignore
+          retention-days: 14
