@@ -14,7 +14,7 @@ replacements = {
     "torch.zeros([batch_size, seq_length],dtype=torch.long).cuda()": "torch.zeros([batch_size, seq_length], dtype=torch.long, device=img_feats.device)",
     "template_pose.cuda(self.config.device)": "template_pose.to(images.device)",
     "torch.zeros((1,10)).cuda(self.config.device)": "torch.zeros((1,10), device=images.device)",
-    "torch.ones_like(features).cuda(self.config.device)": "torch.ones_like(features)",
+    "constant_tensor = torch.ones_like(features).cuda(self.config.device)*0.01": "constant_tensor = torch.ones_like(features)*0.01",
 }
 for before, after in replacements.items():
     if source.count(before) == 1:

@@ -87,6 +87,8 @@ def main():
     public_files = [ROOT / "records/people/metro_3dpw_state_dict.bin", ROOT / "records/people/hrnet_w64.yaml"]
     missing = [str(path) for path in public_files if not path.is_file()]
     smpl_ready = args.smpl_path.is_file()
+    if not args.check and not smpl_ready:
+        parser.error(f"Official SMPL file missing: {args.smpl_path}. Obtain it at https://smplify.is.tue.mpg.de/ .")
     report = {"device": args.device, "smpl_present": smpl_ready, "smpl_expected": str(args.smpl_path),
               "missing_public_files": missing, "full_checkpoint_loaded": False,
               "encoder_cpu_smoke": False, "mesh_inference_run": False, "metric_depth_cm": None,
