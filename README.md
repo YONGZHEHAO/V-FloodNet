@@ -1,5 +1,11 @@
 # V-FloodNet
 
+> **本 Fork 的 Codex 云端配置：** 请先阅读 [中文运行说明](docs/CODEX_CLOUD.md)。
+> 执行 `bash .codex/setup.sh` 安装固定版本的 Linux CPU 环境；
+> 使用 `bash .codex/run.sh ...` 运行。默认提供图片分割和停止标志估深依赖。
+> 人物/视频的 CUDA 路线及 SMPL 授权文件不包含在该 CPU 配置中。
+> 下方保留原作者说明；云端不要直接安装旧版根目录 `requirements.txt`。
+
 This is an official PyTorch implementation for paper "V-FloodNet: A Video Segmentation System for Urban Flood Detection and Quantification". A robust automatic system for water level or inundation depth estimation from images and videos, consisting of reliable
 water and reference object detection/segmentation, and depth estimation models. 
 

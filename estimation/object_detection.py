@@ -257,7 +257,7 @@ def predict_boundary(y1: np.array, y2: np.array, resolution):
         return boundary.astype(int), y1_selected
 
 
-def est_by_obj_detection(img_list, water_mask_list, out_dir, opt):
+def est_by_obj_detection(img_list, water_mask_list, out_dir, opt, device=None):
 
     if opt == 'stopsign':
         user_config = stopsign_config
@@ -271,6 +271,12 @@ def est_by_obj_detection(img_list, water_mask_list, out_dir, opt):
     add_pointrend_config(cfg)  # add pointrend's default config
     cfg.merge_from_file(user_config['config_file'])
     cfg.merge_from_list(user_config['opts'])
+    cfg.MODEL.DEVICE = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    # Setup downloads this file before the agent's network access is restricted.
+    if opt == 'stopsign':
+        local_weights = 'records/detectron2/model_final_ba17b9.pkl'
+        if os.path.isfile(local_weights):
+            cfg.MODEL.WEIGHTS = local_weights
 
     # Set score_threshold for builtin models
     cfg.MODEL.RETINANET.SCORE_THRESH_TEST = user_config['conf_thres']

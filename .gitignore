@@ -11,3 +11,13 @@ logs/
 records/
 WaterDataset/
 output/
+
+# Codex Linux environment, toolchains and downloaded dependencies
+.venv/
+.codex/tools/
+.codex/cache/
+.codex/python/
+.codex/tmp/
+.codex/vendor/
+.codex/*.log
+.codex/environment-report.json

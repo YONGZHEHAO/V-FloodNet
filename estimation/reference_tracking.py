@@ -48,6 +48,9 @@ def get_video_homo(img_st_path, homo_mat_path):
         homo_mat = np.asmatrix(np.loadtxt(homo_mat_path))
         return homo_mat
 
+    if os.environ.get('MPLBACKEND', '').lower() == 'agg' and not os.environ.get('DISPLAY'):
+        raise RuntimeError(f'Headless environment: supply a calibrated homography at {homo_mat_path} before running --opt ref.')
+
     print('Estimate the video homo mat.')
     print('Select four points that represent a HORIZONTAL and VERTICAL rectangle in order:')
     print('\tTopLeft, TopRight, BottomLeft, BottomRight.')
@@ -89,6 +92,8 @@ def get_video_ref(ref_img, ref_bbox_path, tracker_num, enable_tracker):
         if tracker_num == 1:
             ref_bbox = [ref_bbox]
     else:
+        if os.environ.get('MPLBACKEND', '').lower() == 'agg' and not os.environ.get('DISPLAY'):
+            raise RuntimeError(f'Headless environment: supply reference bounding boxes at {ref_bbox_path} before running --opt ref.')
         track_window_name = 'Select A Rect As Reference Obj'
         ref_bbox = []
         for t in range(tracker_num):

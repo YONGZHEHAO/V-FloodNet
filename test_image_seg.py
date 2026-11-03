@@ -110,12 +110,8 @@ def predict_pil(model, img_pil, model_dims, device):
     # Add extra dimension at front as model expects input 1*3*dimX*dimY (batch size of 1)
     input_data = img_tensor_norm.unsqueeze(0)
 
-    try:
-        # print("Converted input image to cuda.")
+    with torch.inference_mode():
         prediction = model.predict(input_data.to(device))
-    except:
-        print("Did not convert input image to cuda.")
-        prediction = model.predict(input_data)
 
     prediction = pred_resize(prediction)
     prediction = myutils.postprocessing_pred(prediction.squeeze().cpu().round().numpy().astype(np.uint8))
@@ -130,7 +126,10 @@ def test_waterseg(model_path, test_path, test_name, out_path, device):
     :param args: Command line args
     :return: None
     """
-    model = torch.load(model_path)
+    # The official checkpoint contains a serialized model saved on CUDA.
+    # Only load checkpoints from a trusted source (setup verifies the archive).
+    model = torch.load(model_path, map_location=device)
+    model = model.to(device).eval()
     test_path = test_path
     out_path = os.path.join(out_path, test_name)
 

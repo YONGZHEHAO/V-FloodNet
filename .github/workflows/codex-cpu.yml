@@ -1,0 +1,52 @@
+name: Codex CPU environment
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.codex/**'
+      - '.github/workflows/codex-cpu.yml'
+      - 'scripts/download_cloud_weights.py'
+      - 'test_image_seg.py'
+      - 'est_waterlevel.py'
+      - 'estimation/**'
+  pull_request:
+    paths:
+      - '.codex/**'
+      - '.github/workflows/codex-cpu.yml'
+      - 'scripts/download_cloud_weights.py'
+      - 'test_image_seg.py'
+      - 'est_waterlevel.py'
+      - 'estimation/**'
+
+permissions:
+  contents: read
+
+jobs:
+  cpu:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.16'
+      - name: Install CPU environment and official models
+        run: bash .codex/setup.sh
+      - name: Real image inference and CPU compatibility checks
+        run: |
+          bash .codex/run.sh .codex/check_environment.py --profile cpu --require-weights --smoke --depth-smoke
+          bash .codex/run.sh est_waterlevel.py --help
+      - name: Save environment report and demo images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-cpu-validation
+          path: |
+            .codex/environment-report.json
+            output/segs/cloud_smoke/
+            output/segs/cloud_stopsign/
+            output/waterlevel/cloud_stopsign_stopsign/
+          if-no-files-found: ignore
+          retention-days: 7

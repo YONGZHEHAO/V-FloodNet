@@ -1,0 +1,33 @@
+# Python 3.10, Linux x86_64. CPU wheels avoid installing NVIDIA runtimes.
+torch @ https://download.pytorch.org/whl/cpu/torch-2.2.2%2Bcpu-cp310-cp310-linux_x86_64.whl
+torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.17.2%2Bcpu-cp310-cp310-linux_x86_64.whl
+numpy==1.23.5
+scipy==1.10.1
+pandas==1.5.3
+matplotlib==3.7.3
+Pillow==9.5.0
+opencv-contrib-python-headless==4.8.1.78
+segmentation-models-pytorch==0.2.0
+timm==0.4.12
+efficientnet-pytorch==0.6.3
+pretrainedmodels==0.7.4
+tqdm==4.66.5
+requests==2.32.3
+six==1.16.0
+# Detectron2's runtime and build dependencies; its source is pinned in setup.sh.
+yacs==0.1.8
+pycocotools==2.0.8
+termcolor==2.4.0
+tabulate==0.9.0
+cloudpickle==3.0.0
+tensorboard==2.16.2
+fvcore==0.1.5.post20221221
+iopath==0.1.9
+omegaconf==2.3.0
+hydra-core==1.3.2
+black==24.4.2
+packaging==24.1
+setuptools==69.5.1
+wheel==0.44.0
+pip==24.3.1
+ninja==1.11.1.1
