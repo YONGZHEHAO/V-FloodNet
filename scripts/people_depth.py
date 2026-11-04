@@ -72,7 +72,7 @@ def estimate_fraction(template, projected, mask):
     return float(fraction) if 0 <= fraction <= 1 else None
 
 
-def save_diagnostics(image, mask, projected, template, fraction, prefix):
+def save_diagnostics(image, mask, projected, template, fraction, prefix, target_box=None):
     """Save aligned evidence for reviewing a predicted body and its water labels."""
     import numpy as np
     from PIL import Image, ImageDraw
@@ -92,6 +92,9 @@ def save_diagnostics(image, mask, projected, template, fraction, prefix):
         for (x, y), is_wet in zip(points, wet):
             color = (0, 100, 255) if is_wet else (220, 90, 0)
             draw.ellipse((int(x)-1, int(y)-1, int(x)+1, int(y)+1), fill=color)
+    if target_box is not None:
+        for panel in (original, overlay, projected_panel):
+            ImageDraw.Draw(panel).rectangle(target_box, outline=(0, 180, 70), width=1)
     if fraction is not None:
         boundary = template_pixels[:, 1].min() + (1 - fraction) * np.ptp(template_pixels[:, 1])
         ImageDraw.Draw(template_panel).line((0, int(round(boundary)), size-1, int(round(boundary))), fill="red", width=2)
@@ -101,7 +104,7 @@ def save_diagnostics(image, mask, projected, template, fraction, prefix):
                                           (original, overlay, projected_panel, template_panel))):
         draw.text((i * size + 4, 6), title, fill="black")
         canvas.paste(panel, (i * size, 24))
-    draw.text((4, size + 33), "Blue points: mask-water; orange: mask-dry. Template red line: inferred boundary. Unvalidated.", fill="black")
+    draw.text((4, size + 33), "Green box: target. Blue: mask-water; orange: mask-dry. Red template line: estimated boundary. Unvalidated.", fill="black")
     diagnostic = prefix.with_name(prefix.name + "_diagnostic.png")
     canvas.resize((canvas.width * 2, canvas.height * 2), Image.Resampling.NEAREST).save(diagnostic)
     point_file = prefix.with_name(prefix.name + "_points.json")
@@ -111,6 +114,60 @@ def save_diagnostics(image, mask, projected, template, fraction, prefix):
     return {"diagnostic_image": diagnostic.name, "projected_points_file": point_file.name,
             "vertex_count": int(len(projected)), "mask_water_vertex_count": int(wet.sum()),
             "projected_vertices_outside_crop": int(((projected < -1) | (projected > 1)).any(axis=1).sum())}
+
+
+def load_body_geometry(smpl_path, device):
+    """Initialize the licensed body and sampler once for a single run or batch."""
+    import metro.modeling.data.config as cfg
+    cfg.SMPL_FILE = str(smpl_path.resolve())
+    for name in ("JOINT_REGRESSOR_TRAIN_EXTRA", "JOINT_REGRESSOR_H36M_correct", "SMPL_sampling_matrix"):
+        setattr(cfg, name, str(VENDOR / getattr(cfg, name)))
+    from metro.modeling._smpl import SMPL, Mesh
+    return SMPL().to(device), Mesh(filename=cfg.SMPL_sampling_matrix, device=device)
+
+
+def infer_person(network, smpl, sampler, row, candidates_dir, device, output_dir, height_cm=None, report=None):
+    """Run one explicit target with a shared network; keep missing height null."""
+    import numpy as np
+    import torch
+    from PIL import Image
+    from torchvision import transforms
+    from metro.utils.geometric_layers import orthographic_projection
+    if height_cm is not None and not 0 < height_cm < 300:
+        raise ValueError("Known height must be between 0 and 300 cm")
+    image_path = candidates_dir / row["crop_image"]
+    with Image.open(image_path) as source:
+        image = source.convert("RGB")
+    with Image.open(candidates_dir / row["crop_mask"]) as source:
+        mask = np.array(source.resize((224, 224), Image.Resampling.NEAREST))
+    if image.width != image.height or mask.ndim != 2:
+        raise ValueError("Expected a square image crop and an aligned label mask")
+    if not np.isin(mask, [0, 1]).all():
+        raise ValueError("Water mask must contain only background=0 and water=1 labels")
+    transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(),
+                                    transforms.Normalize((.485, .456, .406), (.229, .224, .225))])
+    with torch.inference_mode():
+        camera, _, vertices_sub2, _, _ = network(transform(image).unsqueeze(0).to(device), smpl, sampler)
+        projected = orthographic_projection(vertices_sub2, camera).squeeze(0).cpu().numpy()
+    if projected.shape != (431, 2) or not np.isfinite(projected).all():
+        raise RuntimeError("Expected 431 finite projected body vertices")
+    template = np.array(json.loads((ROOT / "records/template_3Dmesh.txt").read_text()))
+    fraction = estimate_fraction(template, projected, mask)
+    left, top, right, bottom = row["crop_xyxy"]
+    target_box = [(row["bbox_xyxy"][i] - (left if i % 2 == 0 else top)) * 224 / (right - left)
+                  for i in range(4)]
+    output_dir.mkdir(parents=True, exist_ok=True)
+    evidence = save_diagnostics(image, mask, projected, template, fraction, output_dir / row["person_id"], target_box)
+    evidence["selected_person_bbox_224"] = target_box
+    result = dict(report or {})
+    result.update(person_id=row["person_id"], device=str(device), mesh_inference_run=True, submerged_body_fraction=fraction,
+                  supplied_height_cm=height_cm,
+                  metric_depth_cm=fraction * height_cm if fraction is not None and height_cm is not None else None,
+                  source_sha256=row["source_sha256"], crop_sha256=hashlib.sha256(image_path.read_bytes()).hexdigest(),
+                  camera_parameters=camera.detach().cpu().reshape(-1).tolist(), evidence=evidence,
+                  accuracy_validated=False, status="estimated_unvalidated" if fraction is not None else "water_boundary_unavailable")
+    (output_dir / (row["person_id"] + ".json")).write_text(json.dumps(result, indent=2) + "\n")
+    return result
 
 
 def main():
@@ -169,40 +226,9 @@ def main():
     if len(selected) != 1:
         parser.error("person-id must identify one selected crop")
     row = selected[0]
-    from PIL import Image
-    import numpy as np
-    from torchvision import transforms
-    import metro.modeling.data.config as cfg
-    # These paths are relative in the upstream code. Pin all inputs explicitly.
-    cfg.SMPL_FILE = str(args.smpl_path.resolve())
-    for name in ("JOINT_REGRESSOR_TRAIN_EXTRA", "JOINT_REGRESSOR_H36M_correct", "SMPL_sampling_matrix"):
-        setattr(cfg, name, str(VENDOR / getattr(cfg, name)))
-    from metro.modeling._smpl import SMPL, Mesh
-    from metro.utils.geometric_layers import orthographic_projection
     device = torch.device(args.device)
-    smpl = SMPL().to(device)
-    sampler = Mesh(filename=cfg.SMPL_sampling_matrix, device=device)
-    image = Image.open(args.candidates.parent / row["crop_image"]).convert("RGB")
-    mask = np.array(Image.open(args.candidates.parent / row["crop_mask"]).resize((224, 224), Image.Resampling.NEAREST))
-    transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(),
-                                    transforms.Normalize((.485, .456, .406), (.229, .224, .225))])
-    with torch.inference_mode():
-        camera, _, vertices_sub2, _, _ = network(transform(image).unsqueeze(0).to(device), smpl, sampler)
-        projected = orthographic_projection(vertices_sub2, camera).squeeze(0).cpu().numpy()
-    if projected.shape != (431, 2) or not np.isfinite(projected).all():
-        raise RuntimeError("Expected 431 finite projected body vertices")
-    template = np.array(json.loads((ROOT / "records/template_3Dmesh.txt").read_text()))
-    fraction = estimate_fraction(template, projected, mask)
-    evidence = save_diagnostics(image, mask, projected, template, fraction, args.output_dir / args.person_id)
-    report.update(person_id=args.person_id, mesh_inference_run=True, submerged_body_fraction=fraction,
-                  supplied_height_cm=args.height_cm,
-                  metric_depth_cm=fraction * args.height_cm if fraction is not None and args.height_cm is not None else None,
-                  source_sha256=row["source_sha256"],
-                  crop_sha256=hashlib.sha256((args.candidates.parent / row["crop_image"]).read_bytes()).hexdigest(),
-                  camera_parameters=camera.detach().cpu().reshape(-1).tolist(),
-                  evidence=evidence,
-                  accuracy_validated=False, status="estimated_unvalidated" if fraction is not None else "water_boundary_unavailable")
-    (args.output_dir / (args.person_id + ".json")).write_text(json.dumps(report, indent=2) + "\n")
+    smpl, sampler = load_body_geometry(args.smpl_path, device)
+    report = infer_person(network, smpl, sampler, row, args.candidates.parent, device, args.output_dir, args.height_cm, report)
     print(json.dumps(report, indent=2))
 
 

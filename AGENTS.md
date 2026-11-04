@@ -32,6 +32,10 @@ Read `docs/CODEX_CLOUD.md` before installing or running inference.
 - Prepare aligned body candidates with `scripts/prepare_people_candidates.py`.
   The ranking is a heuristic; visually review the selected person before inference.
   Do not silently insert average height. Missing known height keeps metric depth null.
+- For reviewed batches, use `scripts/batch_people_depth.py` with a new output directory.
+  Only JSON boolean `reviewed_for_mesh: true` entries run. Check the green target
+  box against the projected body, especially in crowds. A successful forward and
+  an available fraction do not mean a valid depth measurement.
 - Do not fabricate depths, training results, ground truth or GPU availability.
   Report imports, inference, and accuracy validation separately. Segmentation
   alone provides a water mask, not depth in cm or m.
