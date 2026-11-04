@@ -58,6 +58,7 @@ bash .codex/run.sh scripts/review_vehicle_levels.py \
 `review.html` 为复核入口。可选 `--reviews visual_review.json` 载入人工复核记录，
 格式见脚本；没有提供记录的图片保持未逐目标复核。
 不同等级框存在较大重叠时只打标记，不自动合并，也不推断哪一个等级正确。
+需要填写自己的结论时，使用[离线人工复核页面](MANUAL_REVIEW.md)，可保存判断、补框并导出JSON。
 
 ## 如何理解结果
 

@@ -14,6 +14,9 @@
 >
 > **车辆自动分级试跑：** [FLOOD-DEPTH-ML 可选入口](docs/VEHICLE_LEVELS.md)。
 > 使用公开车辆权重输出 Level 0–4 候选，附加包隔离安装；未验证的等级不换算为厘米。
+>
+> **人工复核：** [离线复核页面](docs/MANUAL_REVIEW.md)。
+> 支持原图/检测框切换、逐目标判断、手动补框、浏览器暂存和JSON/CSV导出。
 
 This is an official PyTorch implementation for paper "V-FloodNet: A Video Segmentation System for Urban Flood Detection and Quantification". A robust automatic system for water level or inundation depth estimation from images and videos, consisting of reliable
 water and reference object detection/segmentation, and depth estimation models. 
