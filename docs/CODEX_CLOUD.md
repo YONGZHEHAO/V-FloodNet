@@ -135,12 +135,12 @@ bash .codex/run.sh est_waterlevel.py --test-path WaterDataset/my_images --test-n
 | --- | --- |
 | 图片分割 | 提供安装、官方权重和真实图片检查 |
 | 停止标志估深 | 提供 Detectron2 CPU、官方检测权重和 CPU 入口 |
-| 人物估深 `people` | 未配置；上游 MeshTransformer 有 CUDA 调用，需 GPU、人体网格权重与 SMPL 授权文件 |
+| 人物估深 | 可选 `scripts/people_depth.py` CPU入口；另运行 `.codex/setup_people.sh` 并导入自己的SMPL授权文件；原 `--opt people` 入口仍要求CUDA |
 | 视频分割 | 未配置；原始入口强制 CUDA，不能承诺在普通 CPU 云端运行 |
 | 参考物跟踪 `ref` | 需相机校正矩阵、参考框及物理标定文件；无界面环境不能弹窗选点 |
 
 官方 Codex 文档未承诺本账号环境的 GPU；实际能力应在云端检查，不能仅凭套餐名称推断。
-若最终照片以人物为参照，应另行准备 GPU 运行环境，再按上游 README 安装 MeshTransformer。
+若最终照片以人物为参照，可使用上述可选CPU入口；运行速度取决于目标机器和存储性能。
 SMPL 必须按官方许可自行获取，不应上传到公开仓库。
 
 ## 验证与故障定位

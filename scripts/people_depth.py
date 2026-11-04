@@ -4,6 +4,7 @@ Public checkpoint loading and an encoder CPU smoke check work without SMPL.
 Real mesh inference requires the user's official licensed SMPL neutral file.
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -69,6 +70,47 @@ def estimate_fraction(template, projected, mask):
         return None
     fraction = 1 - (boundary - template_y.min()) / height
     return float(fraction) if 0 <= fraction <= 1 else None
+
+
+def save_diagnostics(image, mask, projected, template, fraction, prefix):
+    """Save aligned evidence for reviewing a predicted body and its water labels."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+
+    size = mask.shape[0]
+    pixels = np.clip(((projected + 1) * size / 2).astype(int), 0, size - 1)
+    template_pixels = np.clip(((template[:, :2] + 1) * size / 2).astype(int), 0, size - 1)
+    wet = mask[pixels[:, 1], pixels[:, 0]] != 0
+    original = image.resize((size, size), Image.Resampling.BILINEAR)
+    overlay_array = np.array(original).copy()
+    water = mask != 0
+    overlay_array[water] = (.6 * overlay_array[water] + .4 * np.array([0, 160, 255])).astype(np.uint8)
+    overlay = Image.fromarray(overlay_array)
+    projected_panel, template_panel = overlay.copy(), Image.new("RGB", (size, size), "white")
+    for panel, points in ((projected_panel, pixels), (template_panel, template_pixels)):
+        draw = ImageDraw.Draw(panel)
+        for (x, y), is_wet in zip(points, wet):
+            color = (0, 100, 255) if is_wet else (220, 90, 0)
+            draw.ellipse((int(x)-1, int(y)-1, int(x)+1, int(y)+1), fill=color)
+    if fraction is not None:
+        boundary = template_pixels[:, 1].min() + (1 - fraction) * np.ptp(template_pixels[:, 1])
+        ImageDraw.Draw(template_panel).line((0, int(round(boundary)), size-1, int(round(boundary))), fill="red", width=2)
+    canvas = Image.new("RGB", (4 * size, size + 54), "white")
+    draw = ImageDraw.Draw(canvas)
+    for i, (title, panel) in enumerate(zip(("Input crop", "Predicted water", "Projected body points", "Template water labels"),
+                                          (original, overlay, projected_panel, template_panel))):
+        draw.text((i * size + 4, 6), title, fill="black")
+        canvas.paste(panel, (i * size, 24))
+    draw.text((4, size + 33), "Blue points: mask-water; orange: mask-dry. Template red line: inferred boundary. Unvalidated.", fill="black")
+    diagnostic = prefix.with_name(prefix.name + "_diagnostic.png")
+    canvas.resize((canvas.width * 2, canvas.height * 2), Image.Resampling.NEAREST).save(diagnostic)
+    point_file = prefix.with_name(prefix.name + "_points.json")
+    point_file.write_text(json.dumps({"coordinate_system": "normalized crop coordinates; -1 to +1 spans the crop",
+                                      "projected_vertices_2d": projected.tolist(),
+                                      "mask_water_at_clipped_vertices": wet.tolist()}, indent=2) + "\n")
+    return {"diagnostic_image": diagnostic.name, "projected_points_file": point_file.name,
+            "vertex_count": int(len(projected)), "mask_water_vertex_count": int(wet.sum()),
+            "projected_vertices_outside_crop": int(((projected < -1) | (projected > 1)).any(axis=1).sum())}
 
 
 def main():
@@ -147,11 +189,18 @@ def main():
     with torch.inference_mode():
         camera, _, vertices_sub2, _, _ = network(transform(image).unsqueeze(0).to(device), smpl, sampler)
         projected = orthographic_projection(vertices_sub2, camera).squeeze(0).cpu().numpy()
+    if projected.shape != (431, 2) or not np.isfinite(projected).all():
+        raise RuntimeError("Expected 431 finite projected body vertices")
     template = np.array(json.loads((ROOT / "records/template_3Dmesh.txt").read_text()))
     fraction = estimate_fraction(template, projected, mask)
+    evidence = save_diagnostics(image, mask, projected, template, fraction, args.output_dir / args.person_id)
     report.update(person_id=args.person_id, mesh_inference_run=True, submerged_body_fraction=fraction,
                   supplied_height_cm=args.height_cm,
                   metric_depth_cm=fraction * args.height_cm if fraction is not None and args.height_cm is not None else None,
+                  source_sha256=row["source_sha256"],
+                  crop_sha256=hashlib.sha256((args.candidates.parent / row["crop_image"]).read_bytes()).hexdigest(),
+                  camera_parameters=camera.detach().cpu().reshape(-1).tolist(),
+                  evidence=evidence,
                   accuracy_validated=False, status="estimated_unvalidated" if fraction is not None else "water_boundary_unavailable")
     (args.output_dir / (args.person_id + ".json")).write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
