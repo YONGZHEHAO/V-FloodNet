@@ -37,6 +37,10 @@ Read `docs/CODEX_CLOUD.md` before installing or running inference.
   box against the projected body, especially in crowds. A successful forward and
   an available fraction do not mean a valid depth measurement.
 - Do not fabricate depths, training results, ground truth or GPU availability.
+  The optional wheel-reference workflow is documented in `docs/WHEEL_DEPTH.md`.
+  It fits manually reviewed visible landmarks; do not call it automatic wheel
+  detection. A rim-height fraction differs from tire-height and human-height
+  fractions. Annotation sensitivity is not a ground-truth error interval.
   Report imports, inference, and accuracy validation separately. Segmentation
   alone provides a water mask, not depth in cm or m.
 - Models, input photos, data, generated results, virtual environments, caches

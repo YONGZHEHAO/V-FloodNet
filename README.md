@@ -8,6 +8,9 @@
 >
 > **人物路线扩展：** [CPU适配与SMPL导入说明](docs/PEOPLE_DEPTH.md)。
 > 公开人体权重与CPU编码器可单独检查；完整网格推理仍需要用户的官方SMPL文件。
+>
+> **车辆参考物扩展：** [车轮/轮毂人工复核与几何试算](docs/WHEEL_DEPTH.md)。
+> 复用现有CPU环境，记录人工边缘与水线；缺少实物尺寸时仅保留参考物比例或定性关系，厘米水深为空。
 
 This is an official PyTorch implementation for paper "V-FloodNet: A Video Segmentation System for Urban Flood Detection and Quantification". A robust automatic system for water level or inundation depth estimation from images and videos, consisting of reliable
 water and reference object detection/segmentation, and depth estimation models. 

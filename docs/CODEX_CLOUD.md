@@ -129,6 +129,7 @@ bash .codex/run.sh est_waterlevel.py --test-path WaterDataset/my_images --test-n
 ## 其他路线的边界
 
 新增的人物CPU适配、公开权重检查与SMPL导入步骤见[人物路线说明](PEOPLE_DEPTH.md)。
+车辆候选筛查和人工轮毂几何试算见[车辆参考物说明](WHEEL_DEPTH.md)，无需新增依赖或模型；缺尺寸不输出厘米水深。
 该扩展与下表的基础CPU配置分开安装；缺少SMPL或没有实际前向结果时不能宣称人物估深已跑通。
 
 | 路线 | 当前 CPU 配置 |
