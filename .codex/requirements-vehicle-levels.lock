@@ -1,0 +1,7 @@
+# Optional vehicle-level overlay, installed with --no-deps into .codex/vendor/vehicle-levels.
+# Inference reuses the locked base CPU libraries. Hashes are from PyPI JSON.
+ultralytics==8.3.133 --hash=sha256:9188f1ef9f6ca28487d6d5b651eba29f1b3d15cd077f497e6c9170f334556c50
+ultralytics-thop==2.0.18 --hash=sha256:2bb44851ad224b116c3995b02dd5e474a5ccf00acf237fe0edb9e1506ede04ec
+psutil==5.9.8 --hash=sha256:611052c4bc70432ec770d5d54f64206aa7203a101ec273a0cd82418c86503bb7 --hash=sha256:02615ed8c5ea222323408ceba16c60e99c3f91639b07da6373fb7e6539abc56d --hash=sha256:d06016f7f8625a1825ba3732081d77c94589dca78b7a3fc072194851e88461a4
+py-cpuinfo==9.0.0 --hash=sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5
+seaborn==0.12.2 --hash=sha256:ebf15355a4dba46037dfd65b7350f014ceb1f13c05e814eda2c9f5fd731afc08

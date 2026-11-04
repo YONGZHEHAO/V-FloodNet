@@ -46,6 +46,12 @@ Read `docs/CODEX_CLOUD.md` before installing or running inference.
 - Models, input photos, data, generated results, virtual environments, caches
   and credentials must stay out of Git. Use `records/`, `WaterDataset/` and
   `output/` (all ignored), and provide links to actual output files.
+- Optional FLOOD-DEPTH-ML vehicle levels: read `docs/VEHICLE_LEVELS.md` and run
+  `.codex/setup_vehicle_levels.sh`. Its hash-locked packages live only in
+  `.codex/vendor/vehicle-levels/`; do not install them into the base `.venv`.
+  Run `scripts/vehicle_levels.py` through the standard wrapper. Detection levels
+  are per-vehicle candidates, not cm measurements or scene-wide water depth.
+  No detection is not zero depth; matching an old car box does not validate a level.
 - When dependencies change, regenerate `.codex/requirements-cpu.lock` with the
   pinned uv 0.9.7 and run `pip check`, the environment check and a real image
   smoke inference. Do not silently bypass failed installations or downloads.
