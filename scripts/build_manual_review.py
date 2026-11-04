@@ -1,7 +1,9 @@
 """Package original photos and immutable model suggestions into an offline review app."""
 import argparse
+import base64
 import hashlib
 import json
+import mimetypes
 import shutil
 from collections import Counter
 from pathlib import Path
@@ -15,6 +17,25 @@ def read(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def write_standalone(output):
+    """Embed exact source bytes without changing the review storage namespace."""
+    media = {}
+    for directory in ("originals", "evidence"):
+        for path in sorted((output / directory).iterdir()):
+            if path.is_file():
+                mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+                media[f"{directory}/{path.name}"] = f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+    page = (output / "index.html").read_text(encoding="utf-8")
+    css = (output / "app.css").read_text(encoding="utf-8")
+    script = (output / "app.js").read_text(encoding="utf-8").replace("</script", "<\\/script")
+    data = (output / "data.js").read_text(encoding="utf-8")
+    inline_media = "window.REVIEW_MEDIA=" + json.dumps(media, separators=(",", ":")) + ";\n"
+    page = page.replace('<link rel="stylesheet" href="app.css">', '<style>'+css+'</style>')
+    page = page.replace('<script src="data.js"></script><script src="app.js"></script>', '<script>'+data+inline_media+'</script><script>'+script+'</script>')
+    (output / "index.html").write_text(page, encoding="utf-8")
+    return len(media)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", type=Path, required=True)
@@ -23,6 +44,7 @@ def main():
     parser.add_argument("--people-results", type=Path)
     parser.add_argument("--wheel-results", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--self-contained", action="store_true", help="Embed original image bytes and scripts in index.html.")
     args = parser.parse_args()
     output = args.output_dir
     if output.exists():
@@ -98,8 +120,10 @@ def main():
     assets = Path(__file__).resolve().parent / "manual_review_app"
     for name in ("index.html", "app.css", "app.js"):
         shutil.copyfile(assets / name, output / name)
+    embedded = write_standalone(output) if args.self_contained else 0
     (output / "使用说明.txt").write_text(
-        "积水照片人工复核\n\n1. 解压后双击 index.html；无需安装软件或联网。\n"
+        "积水照片人工复核\n\n1. 解压后用Edge或Chrome打开index.html；无需安装软件或联网。\n"
+        + ("本版图片和脚本均已嵌入HTML，index.html可以单独复制使用。\n" if args.self_contained else "本版需保留旁边的图片及脚本目录，请完整解压。\n") +
         "2. 左侧优先看“误检提示”和“等级冲突”，再看车辆候选和未检出图片。\n"
         "3. 先判是否可见积水、是否有可用参照物，再逐个框确认目标与等级。\n"
         "4. 我的提示只供参考，所有人工结论初始均为待复核。\n"
@@ -115,6 +139,7 @@ def main():
     checks = {"source_hashes_checked": len(rows), "copied_originals": len(rows),
               "copied_diagnostic_images": len(copied_evidence), "group_counts": data["group_counts"],
               "initial_user_reviews": 0, "inference_rerun": False, "dataset_id": data["dataset_id"]}
+    checks.update(self_contained=args.self_contained, embedded_media_files=embedded)
     (output / "package_checks.json").write_text(json.dumps(checks, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
     print(json.dumps(checks, ensure_ascii=False))
 

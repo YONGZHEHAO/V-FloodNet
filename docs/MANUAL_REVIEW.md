@@ -8,6 +8,8 @@
 
 解压完整复核包后双击 `index.html`，建议用桌面版 Edge 或 Chrome。
 不要只移动HTML文件，保留旁边的 `data.js`、`app.js`、`app.css`、`originals/` 和 `evidence/`。
+也可以生成下述单文件版：图片和脚本均嵌入HTML，此时只复制 `index.html` 即可。
+若页面图片加载失败，新版会显示明确提示；不会自动改写或清除复核结论。
 
 1. 左侧先看“误检提示”和“等级冲突”，再看其他候选和未检出照片。
 2. 右侧填写是否可见积水、有无可用参照物；再逐框判断目标、模型等级和相对水线。
@@ -38,7 +40,8 @@ JSON备份才是可交付、可迁移的工作记录。CSV便于Excel查看，�
 bash .codex/run.sh scripts/build_manual_review.py \
   --results-dir output/vehicle_levels/first_batch \
   --input-dir assets/hydrodynamic_events_20261103/images \
-  --output-dir output/manual_review/first_batch
+  --output-dir output/manual_review/first_batch \
+  --self-contained
 ```
 
 `--results-dir` 由 [车辆分级入口](VEHICLE_LEVELS.md) 生成。
@@ -47,6 +50,12 @@ bash .codex/run.sh scripts/build_manual_review.py \
 `--people-results` 指向人物批次的 `batch_results.json`，
 `--wheel-results` 指向车轮批次的 `results.json`，同时复制其诊断图。
 这些参数均要求对应的本地结果存在；生成器核对输入SHA256，拒绝覆盖既有复核目录。
+
+`--self-contained` 把原图的完整字节和诊断图嵌入 `index.html`，不重新压缩照片，
+也不改变检测坐标、照片ID、数据版本或浏览器暂存键。
+本批单文件约90MB，首次打开需要等待浏览器读取。生成目录中仍保留原始独立文件以便核对。
+旧页面升级时保留原来的文件路径、浏览器和暂存键；不要清理浏览器缓存。
+若另开新文件或换浏览器，先在旧页导出JSON，再在新版导入。
 
 数据和复核产物保存在被Git忽略的 `output/manual_review/` 中。
 GitHub只保存生成器和网页源码，云端任务需先生成模型结果，再生成复核包并下载完整目录。

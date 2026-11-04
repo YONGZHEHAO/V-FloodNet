@@ -3,6 +3,17 @@
   const D = window.REVIEW_DATA;
   const $ = id => document.getElementById(id);
   const NS = "http://www.w3.org/2000/svg";
+  const mediaCache = new Map();
+  function imageURL(path) {
+    if (!window.REVIEW_MEDIA?.[path]) return path;
+    if (!mediaCache.has(path)) {
+      const value=window.REVIEW_MEDIA[path], comma=value.indexOf(","), mime=value.slice(5,value.indexOf(";"));
+      const binary=atob(value.slice(comma+1)), bytes=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+      mediaCache.set(path,URL.createObjectURL(new Blob([bytes],{type:mime})));
+    }
+    return mediaCache.get(path);
+  }
   const KEY = `flood-manual-review:${D.dataset_id}`;
   const GROUPS = {all:"全部",false_positive:"误检提示",conflict:"等级冲突",candidates:"其他候选",no_detection:"未检出"};
   const STATUSES = {pending:"待复核",done:"已复核",deferred:"暂存疑问"};
@@ -79,7 +90,12 @@
     const r=row(), review=activeReview();selectedId=allTargets(r)[0]?.id||null;
     $("photoOrdinal").textContent=`照片 ${String(r.ordinal).padStart(3,"0")} / ${D.image_count} · ${GROUPS[r.group]}`;
     $("photoName").textContent=r.image_id;$("photoContext").textContent=[r.location,r.observed_time].filter(v=>v&&!/^(unknown|none|null)$/i.test(v)).map(v=>String(v).replace(/\bunknown\b/gi,"未核实")).join(" · ")||"地点和拍摄时间未核实";
-    $("originalImage").src=r.original;$("originalLink").href=r.original;$("originalImage").alt=`照片${r.ordinal}原图`;
+    const image=$("originalImage"), src=imageURL(r.original);
+    $("imageLoadState").textContent="图片加载中…";$("imageLoadState").className="image-load-state";
+    image.onload=()=>{if(row().image_id!==id)return;$("imageLoadState").textContent="";fitImage();};
+    image.onerror=()=>{if(row().image_id!==id)return;$("imageLoadState").textContent="照片加载失败。请使用新版单文件页面，或完整解压包含 originals 的复核包。当前记录仍可导出备份。";$("imageLoadState").className="image-load-state error";};
+    image.src=src;$("originalLink").href=src;image.alt=`照片${r.ordinal}原图`;
+    $("imageViewport").scrollTo(0,0);
     $("boxLayer").setAttribute("viewBox",`0 0 ${r.width} ${r.height}`);
     $("sceneWater").value=review.scene_water;$("referenceAvailability").value=review.reference_availability;$("imageNote").value=review.note;
     $("advisory").replaceChildren();const label=document.createElement("strong");label.textContent="已有提示（供参考）： ";$("advisory").append(label,document.createTextNode(r.advisory_note|| (r.detections.length?"尚无逐目标复核结论。请先确认框内是否为车辆，再判断可见水线。":"模型未检出目标。请查看是否有遗漏的人物或其他参照物；不能据此记为零水深。")));
@@ -126,7 +142,7 @@
     const r=row(),c=$("evidenceContent");c.replaceChildren();$("evidencePanel").open=false;$("evidenceCount").textContent=r.evidence.length?`· ${r.evidence.length} 张诊断图`:"";
     const p=document.createElement("p");p.textContent="下列试算不是现场真值。人物身高比例、轮毂直径比例与模型等级不能直接相互换算。";c.append(p);
     if(r.prior_wheel_note){const n=document.createElement("p");n.textContent="旧车辆复核："+r.prior_wheel_note;c.append(n);}
-    for(const e of r.evidence){const article=document.createElement("div");article.className="evidence-entry";const a=document.createElement("a");a.href=e.image;a.target="_blank";a.rel="noopener";const img=document.createElement("img");img.src=e.image;img.loading="lazy";img.alt="既有参照物试算诊断图";a.append(img);const note=document.createElement("p");note.textContent=`${e.kind==="person"?"人物身高比例":"轮毂直径比例"}试算 ${e.fraction===null?"不可用":(e.fraction*100).toFixed(1)+"%"}（未验证）：${e.note}`;article.append(a,note);c.append(article);}
+    for(const e of r.evidence){const article=document.createElement("div");article.className="evidence-entry";const a=document.createElement("a");a.href=imageURL(e.image);a.target="_blank";a.rel="noopener";const img=document.createElement("img");img.src=imageURL(e.image);img.loading="lazy";img.alt="既有参照物试算诊断图";img.onerror=()=>{const error=document.createElement("p");error.textContent="诊断图加载失败；可以继续复核原图并导出记录。";article.append(error);};a.append(img);const note=document.createElement("p");note.textContent=`${e.kind==="person"?"人物身高比例":"轮毂直径比例"}试算 ${e.fraction===null?"不可用":(e.fraction*100).toFixed(1)+"%"}（未验证）：${e.note}`;article.append(a,note);c.append(article);}
     for(const [i,url] of r.source_urls.entries()){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";a.textContent=`来源网页 ${i+1} ↗ `;c.append(a);}
   }
   function move(delta) {
@@ -202,7 +218,7 @@
   $("removeManual").onclick=()=>{const t=selected();if(!t||t.origin!=="manual")return;edit(r=>{r.manual_targets=r.manual_targets.filter(x=>x.id!==t.id);delete r.targets[t.id];});selectedId=allTargets(row())[0]?.id||null;renderTargets();renderEditor();renderBoxes();};
   $("exportJson").onclick=exportJson;$("exportCsv").onclick=exportCsv;$("importButton").onclick=()=>$("importFile").click();$("importFile").onchange=e=>importFile(e.target.files[0]);$("helpButton").onclick=()=>$("helpDialog").showModal();
   document.addEventListener("keydown",e=>{if($("helpDialog").open||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;if(e.key.toLowerCase()==="j"){e.preventDefault();move(1);}else if(e.key.toLowerCase()==="k"){e.preventDefault();move(-1);}else if(e.key.toLowerCase()==="b"){e.preventDefault();toggleBoxes();}else if(e.key==="Enter"){e.preventDefault();complete();}});
-  window.addEventListener("resize",fitImage);$("originalImage").onload=fitImage;
+  window.addEventListener("resize",fitImage);
   try{const raw=localStorage.getItem(KEY);if(raw){const parsed=JSON.parse(raw);if(parsed.schema!==state.schema||parsed.dataset_id!==D.dataset_id)throw Error("版本不匹配");const restored={};for(const [id,r] of Object.entries(parsed.reviews||{}))restored[id]=validateReview(id,r);state.reviews=restored;$("saveState").textContent="已恢复本浏览器上次暂存 · 请定期导出 JSON";}}
   catch{storageOK=false;$("saveState").textContent="暂存无法恢复 · 请导入已导出的 JSON 备份";}
   renderFilters();updateProgress();openImage(currentId);
